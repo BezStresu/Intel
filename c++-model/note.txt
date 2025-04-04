@@ -1,0 +1,1035 @@
+Znajdz wyjasnieni dlaczego nie moge zmeiszac wartosci przy ktorych stoi komentarz <optimize>, gdy to robie program kompiluje sie lecz uruchama sie z bledem
+
+
+
+Quadra.hpp
+
+//
+
+// Quadra.hpp
+
+//
+
+
+
+#ifndef __QUADRA_HPP
+
+#define __QUADRA_HPP
+
+
+
+#ifndef DBG_OUT
+
+#define DBG_OUT 0
+
+#endif
+
+
+
+#ifndef DBG_TST
+
+#define DBG_TST 0
+
+#endif
+
+
+
+#include <ac_int.h>
+
+#include <ac_fixed.h>
+
+#include <ac_float.h>
+
+
+
+// --------------------------------------------------------------------------------
+
+const double ERR_TOL = 2.150e-6; // approximation error must be below this value
+
+// --------------------------------------------------------------------------------
+
+
+
+const double PI_OVER_4 = M_PI / 4.0;
+
+
+
+// rounding modes:
+
+const ac_q_mode rdz = AC_RND_ZERO; // round ties towards zero to avoid rounding up at range edges (eg. 1.999.. to 2.000..)
+
+const ac_q_mode rne = AC_RND_CONV; // round ties towards nearest even
+
+const ac_q_mode trn = AC_TRN;      // truncate
+
+
+
+// data valid:
+
+typedef bool dv_t;
+
+
+
+// --------------------------------------------------------------------------------
+
+// I/O precision
+
+// --------------------------------------------------------------------------------
+
+
+
+// Input x in [0,2] -> u1.23
+
+const int X_I =  1;          // integer part
+
+const int X_F = 23;          // fractional part
+
+const int X_W = X_I + X_F;   // bit width
+
+
+
+typedef ac_int  <X_W,      false>                x_int_t;
+
+typedef ac_fixed<X_W, X_I, false, trn, AC_WRAP>  x_fxd_t; // u1.23
+
+
+
+// x1: x[23:17] -> u1.6
+
+const int X1_I =  1;          // integer part
+
+const int X1_F =  6;          // fractional part
+
+const int X1_W = X1_I + X1_F; // bit width
+
+
+
+typedef ac_int  <X1_W,       false>               x1_int_t;
+
+typedef ac_fixed<X1_W, X1_I, false, trn, AC_WRAP> x1_fxd_t; // u1.6
+
+
+
+// x2: x[16:0] -> u0.17
+
+const int X2_I =  0;          // integer part
+
+const int X2_J = X2_I - X1_F; // (this is key for proper alignment)
+
+const int X2_F =  X_W - X1_W; // fractional part
+
+const int X2_W = X2_I + X2_F; // bit width
+
+
+
+typedef ac_int  <X2_W,       false>               x2_int_t;
+
+typedef ac_fixed<X2_W, X2_J, false, trn, AC_WRAP> x2_fxd_t; // u0.17
+
+
+
+// Coefficients:
+
+// a:
+
+const int A_I =  4;  // <optimize>
+
+const int A_F = 28;  // <optimize>
+
+const int A_W = A_I + A_F;
+
+
+
+typedef ac_int  < A_W,       true>               a_int_t;
+
+typedef ac_fixed< A_W,  A_I, true, rdz, AC_WRAP> a_fxd_t;
+
+
+
+// b:
+
+const int B_I =  4;  // <optimize>
+
+const int B_F = 28;  // <optimize>
+
+const int B_W = B_I + B_F;
+
+
+
+typedef ac_int  < B_W,       true>               b_int_t;
+
+typedef ac_fixed< B_W,  B_I, true, rdz, AC_WRAP> b_fxd_t;
+
+
+
+// c:
+
+const int C_I =  4;  // <optimize>
+
+const int C_F = 28;  // <optimize>
+
+const int C_W = C_I + C_F;
+
+
+
+typedef ac_int  < C_W,       true>               c_int_t;
+
+typedef ac_fixed< C_W,  C_I, true, rdz, AC_WRAP> c_fxd_t;
+
+
+
+// Output y in [-2,2) -> u2.23
+
+const int Y_I =  2;        // integer part
+
+const int Y_F = 23;        // fractional part
+
+const int Y_W = Y_I + Y_F; // bit width
+
+
+
+typedef ac_int  <Y_W,      true>               y_int_t;
+
+typedef ac_fixed<Y_W, Y_I, true, rne, AC_WRAP> y_rnd_t; // (round)
+
+typedef ac_fixed<Y_W, Y_I, true, trn, AC_WRAP> y_fxd_t; // (truncate)
+
+
+
+// --------------------------------------------------------------------------------
+
+// Internal precision:
+
+// --------------------------------------------------------------------------------
+
+
+
+// extra working fractional bits to be rounded off at the end
+
+const int R_F = 4;
+
+
+
+const int S_I = Y_I;
+
+const int S_F = Y_F + R_F;  // (4 extra fractional bits to be rounded)
+
+const int S_W = S_I + S_F;
+
+
+
+typedef ac_fixed< S_W,  S_I, true, trn, AC_WRAP> s_fxd_t; // s = t0 + t1 + t2
+
+
+
+// Polynomial calculation:
+
+
+
+const int SQ_I = X2_I + X2_I;
+
+#ifdef FULL_PRECISION
+
+const int SQ_F = X2_F + X2_F;
+
+#else
+
+const int SQ_F = 24;
+
+#endif
+
+const int SQ_W = SQ_I + SQ_F;
+
+
+
+typedef ac_fixed<SQ_W, SQ_I, false, trn, AC_WRAP> sq_fxd_t; // sq = x2 * x2
+
+
+
+const int T0_I =  A_I;
+
+#ifdef FULL_PRECISION
+
+const int T0_F =  A_F;
+
+#else
+
+const int T0_F =  S_F;
+
+#endif
+
+const int T0_W = T0_I + T0_F;
+
+
+
+typedef ac_fixed<T0_W, T0_I,  true, trn, AC_WRAP> t0_fxd_t; // t0 = a
+
+
+
+const int T1_I =  B_I + X2_I;
+
+#ifdef FULL_PRECISION
+
+const int T1_F =  B_F + X2_F;
+
+#else
+
+const int T1_F =  S_F;
+
+#endif
+
+const int T1_W = T1_I + T1_F;
+
+
+
+typedef ac_fixed<T1_W, T1_I,  true, trn, AC_WRAP> t1_fxd_t; // t1 = b * x2
+
+
+
+const int T2_I =  C_I + SQ_I;
+
+#ifdef FULL_PRECISION
+
+const int T2_F =  C_F + SQ_F;
+
+#else
+
+const int T2_F =  S_F;
+
+#endif
+
+const int T2_W = T2_I + T2_F;
+
+
+
+typedef ac_fixed<T2_W, T2_I,  true, trn, AC_WRAP> t2_fxd_t; // t2 = c * x2^2
+
+                                     
+
+// Top function prototype:
+
+y_fxd_t approxDouble(const x_fxd_t & x_fxd);
+
+y_fxd_t approxFixed (const x_fxd_t & x_fxd);
+
+
+
+#endif
+
+
+
+Quadra.cpp
+
+//
+
+// Quadra.cpp -- bit-accurate C++ model of the Quadratic Approximation Unit (QAU)
+
+//
+
+
+
+// Approximation of f(x) = sin((2*x)-(pi/4)) for x in [0, 2)
+
+
+
+#include <iostream>
+
+#include <iomanip>
+
+#include <bitset>
+
+#include <cmath>
+
+
+
+#include "Quadra.hpp"
+
+
+
+#include "CoeffTable.hpp"
+
+
+
+using namespace std;
+
+
+
+y_fxd_t approxDouble (const x_fxd_t & x_fxd)
+
+{
+
+    using namespace std;
+
+
+
+    const int PREC  = 28;
+
+    const int WIDTH = PREC + 3;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "x_fxd  = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << x_fxd.to_double() << endl;
+
+    }
+
+
+
+    // Break up into LUT index and delta:
+
+     x_int_t  x_int = x_fxd.slc<X_W>     (0); // u24 -> [23: 0]
+
+    x1_int_t x1_int = x_int.slc<X1_W> (X2_W); // u7  -> [23:17]
+
+    x2_int_t x2_int = x_int.slc<X2_W>    (0); // u17 -> [16: 0]
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "x1_int =  0x"
+
+             << hex << fixed << setw(2) << setfill('0') << right
+
+             << x1_int.to_int() << endl;
+
+        cout << "x2_int =  0x"
+
+             << hex << fixed << setw(5) << setfill('0') << right
+
+             << x2_int.to_int() << endl;
+
+    }
+
+
+
+    x1_fxd_t x1_fxd = 0; x1_fxd.set_slc(0, x1_int); // u1.6
+
+    x2_fxd_t x2_fxd = 0; x2_fxd.set_slc(0, x2_int); // u(-6).23
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "x1_fxd = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << x1_fxd.to_double() << endl;
+
+        cout << "x2_fxd = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << x2_fxd.to_double() << endl;
+
+    }
+
+
+
+    double x2_dbl = x2_fxd.to_double();
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "x2_dbl = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << x2_dbl << endl;
+
+    }
+
+
+
+    // Table index:
+
+    x1_int_t index = x1_int;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "index  =  "
+
+             << dec << fixed << setw(3) << setfill(' ') << left
+
+             << index.to_int() << endl;
+
+    }
+
+
+
+    // Double coefficients:
+
+    double a_dbl = CoeffTable[index][1];
+
+    double b_dbl = CoeffTable[index][2];
+
+    double c_dbl = CoeffTable[index][3];
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "a_dbl  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  a_dbl << endl;
+
+        cout << "b_dbl  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  b_dbl << endl;
+
+        cout << "c_dbl  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  c_dbl << endl;
+
+    }
+
+
+
+    // Calculate quadratic polynomial:
+
+    double b_x2   =  b_dbl * x2_dbl; //  b * x2
+
+    double x2sq   = x2_dbl * x2_dbl; // x2 * x2
+
+    double c_x2sq =  c_dbl * x2sq;   //  c * x2^2
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "b_x2   = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             <<  b_x2 << endl;
+
+        cout << "x2sq   = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             <<  x2sq << endl;
+
+        cout << "c_x2sq = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             <<  c_x2sq << endl;
+
+    }
+
+
+
+    double t0 = a_dbl;
+
+    double t1 = b_x2;
+
+    double t2 = c_x2sq;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "t0     = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             << t0 << endl;
+
+        cout << "t1     = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             << t1 << endl;
+
+        cout << "t2     = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             << t2 << endl;
+
+    }
+
+
+
+    // 3-way addition:
+
+    double sum = t0 + t1 + t2;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "sum    = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << sum << endl;
+
+    }
+
+   
+
+    // Round:
+
+    y_rnd_t y_rnd = sum;
+
+
+
+    // Output:
+
+    y_fxd_t y_fxd = y_rnd;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "y_fxd  = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << y_fxd.to_double() << endl;
+
+    }
+
+
+
+    return y_fxd;
+
+}
+
+
+
+y_fxd_t approxFixed (const x_fxd_t & x_fxd)
+
+{
+
+    using namespace std;
+
+
+
+    const int PREC  = 28;
+
+    const int WIDTH = PREC + 3;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "x_fxd  = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << x_fxd.to_double() << endl;
+
+    }
+
+
+
+    // Break up into LUT index and delta:
+
+     x_int_t  x_int = x_fxd.slc<X_W>     (0); // u24 -> [23: 0]
+
+    x1_int_t x1_int = x_int.slc<X1_W> (X2_W); // u7  -> [23:17]
+
+    x2_int_t x2_int = x_int.slc<X2_W>    (0); // u17 -> [16: 0]
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "x1_int =  0x"
+
+             << hex << fixed << setw(2) << setfill('0') << right
+
+             << x1_int.to_int() << endl;
+
+        cout << "x2_int =  0x"
+
+             << hex << fixed << setw(5) << setfill('0') << right
+
+             << x2_int.to_int() << endl;
+
+    }
+
+
+
+    x1_fxd_t x1_fxd = 0; x1_fxd.set_slc(0, x1_int); // u1.6
+
+    x2_fxd_t x2_fxd = 0; x2_fxd.set_slc(0, x2_int); // u(-6).23
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "x1_fxd = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << x1_fxd.to_double() << endl;
+
+        cout << "x2_fxd = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << x2_fxd.to_double() << endl;
+
+    }
+
+
+
+    // Square:
+
+    sq_fxd_t sq_fxd = x2_fxd * x2_fxd; // x2 * x2
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "sq_fxd = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             <<  sq_fxd.to_double() << endl;
+
+    }
+
+
+
+    // Table index:
+
+    x1_int_t index = x1_int;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "index  =  "
+
+             << dec << fixed << setw(3) << setfill(' ') << left
+
+             << index.to_int() << endl;
+
+    }
+
+
+
+    // Double coefficients:
+
+    double a_dbl = CoeffTable[index][1];
+
+    double b_dbl = CoeffTable[index][2];
+
+    double c_dbl = CoeffTable[index][3];
+
+
+
+    // Double to fixed-point:
+
+    a_fxd_t a_fxd = a_dbl;
+
+    b_fxd_t b_fxd = b_dbl;
+
+    c_fxd_t c_fxd = c_dbl;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "a_dbl  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  a_dbl << endl;
+
+        cout << "a_fxd  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  a_fxd.to_double() << endl;
+
+        cout << "b_dbl  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  b_dbl << endl;
+
+        cout << "b_fxd  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  b_fxd.to_double() << endl;
+
+        cout << "c_dbl  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  c_dbl << endl;
+
+        cout << "c_fxd  = "   << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  c_fxd.to_double() << endl;
+
+    }
+
+
+
+    // Calculate quadratic polynomial:
+
+    t0_fxd_t t0_fxd =  a_fxd;          //  a
+
+    t1_fxd_t t1_fxd =  b_fxd * x2_fxd; //  b * x2
+
+    t2_fxd_t t2_fxd =  c_fxd * sq_fxd; //  c * x2^2
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "t0_fxd = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             << t0_fxd.to_double() << endl;
+
+        cout << "t1_fxd = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             << t1_fxd.to_double() << endl;
+
+        cout << "t2_fxd = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << right
+
+             << t2_fxd.to_double() << endl;
+
+    }
+
+
+
+    // 3-way addition:
+
+    s_fxd_t s_fxd = t0_fxd + t1_fxd + t2_fxd;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "s_fxd  = " << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << s_fxd.to_double() << endl;
+
+    }
+
+   
+
+    // Round:
+
+    y_rnd_t y_rnd = s_fxd;
+
+
+
+    // Output:
+
+    y_fxd_t y_fxd = y_rnd;
+
+
+
+    if constexpr (DBG_OUT) {
+
+        cout << "y_fxd  = "
+
+             << dec << fixed << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             << y_fxd.to_double() << endl;
+
+    }
+
+
+
+    return y_fxd;
+
+}
+
+
+
+QuadraTb.cpp
+
+//
+
+// QuadraTb.cpp -- test bench for the Quadratic Approximation Unit (QAU) Model
+
+//
+
+
+
+#include <cstdint>
+
+#include <algorithm>    // std::max
+
+#include <vector>
+
+#include <iostream>
+
+#include <iomanip>
+
+#include <bitset>
+
+
+
+#include "Quadra.hpp"
+
+
+
+bool testFunction (const double & x_dbl)
+
+{
+
+    using namespace std;
+
+
+
+    const int PREC  = 28;
+
+    const int WIDTH = PREC + 3;
+
+
+
+    // Input:
+
+    x_fxd_t x_fxd = x_dbl;
+
+
+
+    if constexpr (DBG_TST) {
+
+        cout << "x_dbl  = " << dec << fixed      << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  x_dbl     << endl;
+
+    }
+
+
+
+    // Approximation:
+
+#ifdef DOUBLE_OVERRIDE
+
+    y_fxd_t y_fxd = approxDouble (x_fxd); // use this to override fixed point with doubles
+
+#else
+
+    y_fxd_t y_fxd = approxFixed  (x_fxd); // fixed-point data path
+
+#endif
+
+
+
+    // Ouput:
+
+    double y_dbl = y_fxd.to_double();
+
+
+
+    // Reference (CPU):
+
+    double y_ref = sin((2.0 * x_dbl) - PI_OVER_4);
+
+
+
+    // Error:
+
+    double y_err = abs(y_dbl - y_ref);
+
+
+
+    if constexpr (DBG_TST) {
+
+        cout << "y_dbl  = " << dec << fixed      << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  y_dbl     << endl;
+
+        cout << "y_ref  = " << dec << fixed      << setw(WIDTH) << setprecision(PREC) << setfill(' ') << right
+
+             <<  y_ref << endl;
+
+        cout << "y_err  = " << dec << scientific << setw(9)     << setprecision(2)    << setfill(' ') << right
+
+             <<  y_err << endl << endl;
+
+    }
+
+
+
+    // Pass/fail:
+
+    bool in_spec = (y_err < ERR_TOL);
+
+
+
+    return in_spec;
+
+}
+
+
+
+bool testFunction (void)
+
+{
+
+    using namespace std;
+
+
+
+    // Test params:
+
+    uint32_t m_start = 0x000000; // 0.0
+
+    uint32_t m_stop  = 0xffffff; // 1.999...
+
+    uint32_t m_step  = 0x000101; // sparse test
+
+//  uint32_t m_step  = 0x000001; // exhaustive test
+
+
+
+    // Initialize test status:
+
+    bool ok_sts = true;
+
+
+
+    // Main simulation loop:
+
+    for (uint32_t m = m_start; m <= m_stop; m += m_step)
+
+    {
+
+        double x_dbl = double(m) / double(0x00800000);
+
+        //             ---------------------
+
+        bool in_spec = testFunction (x_dbl);
+
+        //             ---------------------
+
+
+
+        ok_sts &= in_spec;
+
+    }
+
+
+
+    return ok_sts;
+
+}
+
+
+
+int main (int argc, char *argv[])
+
+{
+
+    std::cout << "Start\n";
+
+
+
+    bool ok_sts = true;
+
+
+
+    ok_sts &= testFunction();
+
+
+
+    int ret_sts = (ok_sts) ? 0 : -1;
+
+
+
+    std::cout << "Stop\n";
+
+   
+
+    return ret_sts;
+
+
+
+}
